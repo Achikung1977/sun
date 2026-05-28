@@ -3,93 +3,559 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบเชื่อมต่อ Google Apps Script</title>
+    <title>ระบบจัดการข้อมูลนักศึกษา</title>
     <style>
-        /* ตกแต่งหน้าเว็บเล็กน้อยเพื่อให้ดูง่ายขึ้นครับ */
-        body {
+        :root {
+            --primary-color: #1e3a8a;
+            --primary-hover: #1d4ed8;
+            --secondary-color: #10b981;
+            --secondary-hover: #059669;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
             display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 20px;
+        }
+
+        header {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            width: 100%;
+            text-align: center;
+            border-left: 6px solid var(--primary-color);
+        }
+
+        header h1 {
+            color: var(--primary-color);
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .status-card {
+            background-color: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1e3a8a;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .main-layout {
+            display: block;
+        }
+
+        .data-section {
+            background-color: var(--card-bg);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        .section-title {
+            font-size: 18px;
+            color: var(--primary-color);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            font-size: 13px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-edit {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-submit {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 10px 20px;
+            font-size: 15px;
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        .btn-submit:hover {
+            background-color: var(--secondary-hover);
+        }
+
+        .btn-close {
+            background-color: #e2e8f0;
+            color: #475569;
+            padding: 10px 20px;
+            font-size: 15px;
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .btn-close:hover {
+            background-color: #cbd5e1;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            display: none;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            z-index: 1000;
+            padding: 20px;
         }
-        .container {
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 400px;
+
+        .modal-box {
+            background-color: var(--card-bg);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
             width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
         }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.3s;
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 11fr);
+            gap: 16px;
+            margin-bottom: 20px;
         }
-        button:hover {
-            background-color: #45a049;
+
+        @media (max-width: 600px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
         }
-        #result {
-            margin-top: 20px;
-            font-weight: bold;
-            color: #333;
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
-        .loading {
-            color: #888;
-            font-style: italic;
+
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+
+        @media (max-width: 600px) {
+            .form-group.full-width {
+                grid-column: span 1;
+            }
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        input {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--primary-color);
+        }
+
+        input[readonly] {
+            background-color: #f1f5f9;
+            color: #94a3b8;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>ดึงข้อมูลจาก Google Apps Script</h2>
-        <p>กดปุ่มด้านล่างเพื่อรับข้อความจากระบบหลังบ้าน (code.gs)</p>
-        <button id="fetchBtn">ดึงข้อมูล</button>
-        
-        <div id="result">ยังไม่มีการเรียกข้อมูล</div>
+        <header>
+            <h1>ระบบจัดการและลงทะเบียนข้อมูลนักศึกษา</h1>
+            <p>เชื่อมต่อระบบฐานข้อมูล Google Sheets ผ่าน GitHub Pages + Fetch API</p>
+        </header>
+
+        <!-- สถานะการเชื่อมต่อ -->
+        <div id="statusMessage" class="status-card">
+            <div class="spinner"></div>
+            <span>กำลังโหลดและเชื่อมต่อฐานข้อมูล...</span>
+        </div>
+
+        <div class="main-layout">
+            <!-- ส่วนแสดงตารางข้อมูล -->
+            <div class="data-section">
+                <div class="section-title">รายชื่อนักศึกษาในระบบ</div>
+                <table id="studentTable">
+                    <thead>
+                        <tr>
+                            <th>รหัสนักศึกษา</th>
+                            <th>ชื่อ</th>
+                            <th>นามสกุล</th>
+                            <th>ชื่อเล่น</th>
+                            <th>เบอร์โทรศัพท์</th>
+                            <th>จัดการข้อมูล</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- ข้อมูลจะถูกโหลดมาใส่ตรงนี้ด้วย JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
+    <!-- หน้าต่างแก้ไขข้อมูล (Modal Form) -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="section-title" style="margin-bottom: 20px;">แก้ไขข้อมูลนักศึกษา</div>
+            <form id="studentForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>รหัสนักศึกษา (แก้ไขไม่ได้)</label>
+                        <input type="text" id="studentId" name="studentId" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>ชื่อเล่น</label>
+                        <input type="text" id="nickName" name="nickName">
+                    </div>
+                    <div class="form-group">
+                        <label>ชื่อ (ภาษาไทย)</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>นามสกุล (ภาษาไทย)</label>
+                        <input type="text" id="lastName" name="lastName" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>เบอร์โทรศัพท์นักศึกษา</label>
+                        <input type="text" id="tel" name="tel">
+                    </div>
+                    
+                    <!-- ข้อมูลบิดา -->
+                    <div class="form-group">
+                        <label>ชื่อบิดา</label>
+                        <input type="text" id="fName" name="fName">
+                    </div>
+                    <div class="form-group">
+                        <label>นามสกุลบิดา</label>
+                        <input type="text" id="fLastName" name="fLastName">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>เบอร์โทรบิดา</label>
+                        <input type="text" id="fTel" name="fTel">
+                    </div>
+
+                    <!-- ข้อมูลมารดา -->
+                    <div class="form-group">
+                        <label>ชื่อมารดา</label>
+                        <input type="text" id="mName" name="mName">
+                    </div>
+                    <div class="form-group">
+                        <label>นามสกุลมารดา</label>
+                        <input type="text" id="mLastName" name="mLastName">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>เบอร์โทรมารดา</label>
+                        <input type="text" id="mTel" name="mTel">
+                    </div>
+
+                    <!-- ข้อมูลผู้ปกครอง -->
+                    <div class="form-group">
+                        <label>ชื่อผู้ปกครอง</label>
+                        <input type="text" id="pName" name="pName">
+                    </div>
+                    <div class="form-group">
+                        <label>นามสกุลผู้ปกครอง</label>
+                        <input type="text" id="pLastName" name="pLastName">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>เบอร์โทรผู้ปกครอง</label>
+                        <input type="text" id="pTel" name="pTel">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-submit">บันทึกการแก้ไขข้อมูล</button>
+                <button type="button" class="btn btn-close" onclick="closeModal()">ยกเลิก</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- ส่วนควบคุมระบบ JavaScript เชื่อมต่อ Google Apps Script -->
+    <!-- ======================================================= -->
     <script>
-        // ⚠️ สำคัญมาก: นำลิงก์ Web App URL ที่ได้จากการ Deploy ใน Google Apps Script มาใส่แทนที่ตรงนี้ครับ
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyKFVECwDV1KPJTqQ9bPjZi6zKtVwFIslNBfRRHFAywNynheQf6y8EXb2PpAh1dmj8/exec"; 
+        // ⚠️ สำคัญที่สุด: นำลิงก์ Web App URL เวอร์ชันล่าสุดที่ได้จากหน้า Google Apps Script มาใส่ที่นี่ครับ
+        const WEB_APP_URL = "https://script.google.com/macros/s/XXXXX/exec"; 
 
-        document.getElementById("fetchBtn").addEventListener("click", function() {
-            const resultDiv = document.getElementById("result");
+        // เก็บข้อมูลดิบของนักศึกษาไว้ทำ Filter หรือค้นหาในหน้าเว็บ
+        let localStudentsData = [];
+
+        // ฟังก์ชันสั่งโหลดข้อมูลเมื่อเปิดหน้าจอ
+        window.onload = function() {
+            loadData();
+        };
+
+        // 1. ฟังก์ชันดึงข้อมูลจาก Google Sheets (GET Action)
+        function loadData() {
+            showStatus("กำลังโหลดและเชื่อมต่อฐานข้อมูล...", true);
             
-            // แสดงสถานะระหว่างรอระบบประมวลผล
-            resultDiv.innerText = "กำลังโหลดข้อมูล...";
-            resultDiv.className = "loading";
-
-            // เริ่มทำการเชื่อมต่อไปยัง Google Apps Script
-            fetch(WEB_APP_URL)
+            fetch(`${WEB_APP_URL}?action=getData`)
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error("เครือข่ายมีปัญหา ไม่สามารถเชื่อมต่อได้");
-                    }
-                    return response.json(); // แปลงข้อมูลที่ได้กลับมาเป็น JSON
+                    if (!response.ok) throw new Error("Network Response is not OK");
+                    return response.json();
                 })
-                .then(data => {
-                    // นำข้อมูลที่ได้ (ในที่นี้คือข้อความ message) ไปแสดงในดิฟ #result
-                    resultDiv.innerText = data.message;
-                    resultDiv.className = ""; // เอาคลาสโหลดออก
+                .then(result => {
+                    if (result.success) {
+                        localStudentsData = result.data;
+                        renderTable(localStudentsData);
+                        hideStatus();
+                    } else {
+                        showStatus("เกิดข้อผิดพลาดจากระบบหลังบ้าน: " + result.error, false, true);
+                    }
                 })
                 .catch(error => {
-                    // หากเกิดข้อผิดพลาด ให้แสดงแจ้งเตือน
-                    console.error("เกิดข้อผิดพลาด:", error);
-                    resultDiv.innerText = "เกิดข้อผิดพลาด: ไม่สามารถดึงข้อมูลได้ (เช็ก URL หรือสิทธิ์การเข้าถึง)";
-                    resultDiv.style.color = "red";
+                    console.error("Fetch Error:", error);
+                    showStatus("ไม่สามารถเชื่อมต่อระบบได้ กรุณาตรวจสอบสิทธิ์ Deployment หรือ URL", false, true);
+                });
+        }
+
+        // ฟังก์ชันนำข้อมูลมาสร้างแถวตารางในหน้า HTML
+        function renderTable(data) {
+            const tbody = document.querySelector("#studentTable tbody");
+            tbody.innerHTML = ""; // เคลียร์ตารางเดิม
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#94a3b8;">ไม่พบข้อมูลนักศึกษาในระบบ</td></tr>`;
+                return;
+            }
+
+            data.forEach(student => {
+                // อิงตาม Key หัวคอลัมน์ของ Google Sheet (ตัดเว้นวรรคแล้ว)
+                // ตรวจสอบหัวตาราง Google Sheet ของคุณให้ตรงกับคำเหล่านี้ เช่น ID, ชื่อ, นามสกุล
+                const id = student["ID"] || student["studentId"] || Object.values(student)[0] || "";
+                const name = student["ชื่อ"] || student["name"] || "";
+                const lastName = student["นามสกุล"] || student["lastName"] || "";
+                const nickName = student["ชื่อเล่น"] || student["nickName"] || "-";
+                const tel = student["โทรศัพท์นักศึกษา"] || student["tel"] || "-";
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td><strong>${id}</strong></td>
+                    <td>${name}</td>
+                    <td>${lastName}</td>
+                    <td>${nickName}</td>
+                    <td>${tel}</td>
+                    <td>
+                        <button class="btn btn-edit" onclick="openEditModal('${id}')">แก้ไขข้อมูล</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 2. ฟังก์ชันเปิดหน้าต่างกรอกฟอร์มเพื่อแก้ไข
+        function openEditModal(studentId) {
+            // ค้นหาข้อมูลของนักศึกษาคนนี้จากอาเรย์ในเครื่อง
+            const student = localStudentsData.find(s => 
+                (s["ID"] || s["studentId"] || Object.values(s)[0] || "").toString() === studentId.toString()
+            );
+
+            if (!student) {
+                alert("ไม่พบข้อมูลนักศึกษารหัสนี้");
+                return;
+            }
+
+            // นำข้อมูลเดิมไปกระจายใส่ใน Input Form ช่องต่างๆ
+            document.getElementById("studentId").value = studentId;
+            document.getElementById("name").value = student["ชื่อ"] || student["name"] || "";
+            document.getElementById("lastName").value = student["นามสกุล"] || student["lastName"] || "";
+            document.getElementById("nickName").value = student["ชื่อเล่น"] || student["nickName"] || "";
+            document.getElementById("tel").value = student["โทรศัพท์นักศึกษา"] || student["tel"] || "";
+            document.getElementById("fName").value = student["ชื่อบิดา"] || student["fName"] || "";
+            document.getElementById("fLastName").value = student["นามสกุลบิดา"] || student["fLastName"] || "";
+            document.getElementById("fTel").value = student["เบอร์บิดา (Ftel)"] || student["fTel"] || "";
+            document.getElementById("mName").value = student["ชื่อมารดา"] || student["mName"] || "";
+            document.getElementById("mLastName").value = student["นามสกุลมารดา"] || student["mLastName"] || "";
+            document.getElementById("mTel").value = student["เบอร์มารดา (Mtel)"] || student["mTel"] || "";
+            document.getElementById("pName").value = student["ชื่อผู้ปกครอง"] || student["pName"] || "";
+            document.getElementById("pLastName").value = student["นามสกุลผู้ปกครอง"] || student["pLastName"] || "";
+            document.getElementById("pTel").value = student["เบอร์ผู้ปกครอง (Ptel)"] || student["pTel"] || "";
+
+            // แสดง Modal ขึ้นมาบนจอ
+            document.getElementById("editModal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("editModal").style.display = "none";
+        }
+
+        // 3. ฟังก์ชันดักจับตอนกดส่งฟอร์มเพื่อเซฟค่ากลับไปยัง Google Sheets (POST Action)
+        document.getElementById("studentForm").addEventListener("submit", function(e) {
+            e.preventDefault(); // บล็อกไม่ให้เว็บรีเฟรชหน้าเอง
+
+            closeModal();
+            showStatus("กำลังส่งข้อมูลไปบันทึกยังฐานข้อมูล Google Sheets...", true);
+
+            // รวบรวมข้อมูลจาก Form ใส่เป็น JSON Object
+            const formData = {
+                studentId: document.getElementById("studentId").value,
+                name: document.getElementById("name").value,
+                lastName: document.getElementById("lastName").value,
+                nickName: document.getElementById("nickName").value,
+                tel: document.getElementById("tel").value,
+                fName: document.getElementById("fName").value,
+                fLastName: document.getElementById("fLastName").value,
+                fTel: document.getElementById("fTel").value,
+                mName: document.getElementById("mName").value,
+                mLastName: document.getElementById("mLastName").value,
+                mTel: document.getElementById("mTel").value,
+                pName: document.getElementById("pName").value,
+                pLastName: document.getElementById("pLastName").value,
+                pTel: document.getElementById("pTel").value
+            };
+
+            // ตั้งค่า HTTP Request สำหรับส่งข้อมูลแบบ POST หา Google Apps Script
+            const requestOptions = {
+                method: "POST",
+                mode: "cors",
+                headers: {
+                    "Content-Type": "text/plain;charset=utf-8" // จำเป็นต้องใช้ตามข้อกำหนดของ Apps Script
+                },
+                body: JSON.stringify(formData)
+            };
+
+            // แนบพารามิเตอร์การทำงานหลักผ่าน Query ?action=saveStudentData
+            fetch(`${WEB_APP_URL}?action=saveStudentData`, requestOptions)
+                .then(response => {
+                    if (!response.ok) throw new Error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ปลายทางได้");
+                    return response.json();
+                })
+                .then(result => {
+                    if (result.success) {
+                        alert("🎉 บันทึกข้อมูลนักศึกษาเรียบร้อยแล้ว!");
+                        loadData(); // รีโหลดข้อมูลตารางใหม่เพื่อแสดงผลข้อมูลปัจจุบัน
+                    } else {
+                        alert("เกิดข้อผิดพลาดในการบันทึก: " + result.error);
+                        hideStatus();
+                    }
+                })
+                .catch(error => {
+                    console.error("Save error:", error);
+                    alert("ล้มเหลว: ไม่สามารถส่งข้อมูลไปบันทึกได้ กรุณาตรวจสอบการตั้งค่า doPost(e)");
+                    hideStatus();
                 });
         });
-    </script>
 
+        // ฟังก์ชันจัดการ UI แจ้งสถานะหน้าจอ
+        function showStatus(text, showSpinner, isError = false) {
+            const statusDiv = document.getElementById("statusMessage");
+            statusDiv.style.display = "flex";
+            statusDiv.style.backgroundColor = isError ? "#fef2f2" : "#eff6ff";
+            statusDiv.style.borderColor = isError ? "#fca5a5" : "#bfdbfe";
+            statusDiv.style.color = isError ? "#991b1b" : "#1e40af";
+            
+            statusDiv.innerHTML = `
+                ${showSpinner ? '<div class="spinner"></div>' : ''}
+                <span>${text}</span>
+            `;
+        }
+
+        function hideStatus() {
+            document.getElementById("statusMessage").style.display = "none";
+        }
+    </script>
 </body>
 </html>
